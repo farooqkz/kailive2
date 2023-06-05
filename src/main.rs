@@ -1,8 +1,6 @@
 use std::net::{SocketAddr, TcpStream};
 use std::time::Duration;
-use std::io::Read;
-use std::str::FromStr;
-use anyhow::Result;
+use std::io::{Read, Write};
 
 
 
@@ -23,20 +21,32 @@ impl RawDebugger {
     }
 
     async fn read(&mut self) -> anyhow::Result<String> {
-        let mut buffer = String::new();
-        self.stream.read_to_string(&mut buffer);
-        if let Some((size, rest)) = buffer.split_once(':') {
-            let size: usize = usize::from_str_radix(size, 10)?;
-            if rest.len() < size {
-                todo!()
+        let mut packet = String::new();
+        let mut size_string = String::new();
+        for byte in self.stream.bytes() {
+            let byte = byte?;
+            if char::from(byte) == ':' {
+                break;
+            } else {
+                size_string.push(char::from(byte));
             }
         }
+        let size: usize = usize::from_str_radix(&size_string, 10)?;
+        for byte in self.stream.bytes() {
+            if packet.len() == size {
+                break;
+            } else {
+                let byte = byte?;
+                packet.push(char::from(byte));
+            }
+        }
+        Ok(packet)
     }
-}
 
-fn with_len(packet: String) -> String {
-    let len = packet.len();
-    format!("{len}:{packet}")
+    async fn write(&mut self, packet: String) -> anyhow::Result<usize> {
+        let packet = format!("{}:{packet}", packet.len());
+        Ok(self.stream.write(packet.as_bytes())?)
+    }
 }
 
 
