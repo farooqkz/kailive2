@@ -11,7 +11,7 @@ struct RawDebugger {
 impl RawDebugger {
     async fn new(addr: &str, discard_first_one: bool) -> anyhow::Result<Self> {
         let addr = addr.parse::<SocketAddr>()?;
-        let mut rdebugger = RawDebugger {
+        let rdebugger = RawDebugger {
             stream: TcpStream::connect_timeout(&addr, Duration::from_secs(2))?
         };
         if discard_first_one {
@@ -20,7 +20,7 @@ impl RawDebugger {
         Ok(rdebugger)
     }
 
-    async fn read(&mut self) -> anyhow::Result<String> {
+    async fn read(&self) -> anyhow::Result<String> {
         let mut packet = String::new();
         let mut size_string = String::new();
         for byte in self.stream.bytes() {
